@@ -1,0 +1,32 @@
+{
+  "title": "Grooa Payment",
+  "name": "GrooaPayment",
+  "version": "1.00",
+  "description": "Payment plugin, for the online courses",
+  "author": "Fredrik F. Lindhagen",
+  "options": [
+    {
+      "label": "Client Id",
+      "name": "clientId",
+      "required": true,
+      "type": "Text"
+    },
+    {
+      "label": "Secret",
+      "name": "secret",
+      "required": true,
+      "type": "Text"
+    },
+    {
+      "label": "Sandbox mode",
+      "name": "useSandbox",
+      "type": "Checkbox",
+      "default": 1
+    },
+    {
+      "label": "PayPal Account",
+      "name": "account",
+      "type": "Email"
+    }
+  ]
+}
