@@ -3,7 +3,8 @@ namespace Plugin\GrooaPayment;
 
 use Ip\Exception;
 use \Ip\Internal\Plugins\Service as PluginService;
-use \Plugin\Track\Models\Track;
+use Plugin\GrooaPayment\Model\TrackOrder;
+use \Plugin\Track\Model\Track;
 
 class Worker {
 
@@ -11,7 +12,7 @@ class Worker {
 
     public function __construct()
     {
-        $this->orderTable = ipTable("track_order");
+        $this->orderTable = ipTable(TrackOrder::TABLE);
     }
 
     public function activate() {
