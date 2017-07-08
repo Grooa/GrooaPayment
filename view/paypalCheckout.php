@@ -6,7 +6,7 @@
 
     paypal.Button.render({
 
-        env: 'sandbox', // Or 'production'
+        env: '<?=$useSandbox ? 'sandbox' : 'production'?>',
 
         commit: true, // Show a 'Pay Now' button
 
