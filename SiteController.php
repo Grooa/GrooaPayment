@@ -2,17 +2,18 @@
 
 namespace Plugin\GrooaPayment;
 
+use Ip\Exception;
 use PayPal\Api\Amount;
 use PayPal\Api\Item;
 use PayPal\Api\ItemList;
 use PayPal\Api\Transaction;
 use PayPal\Exception\PayPalConnectionException;
-use Plugin\Track\Models\TrackModel;
+use Plugin\Track\Model\Track;
 
-use Plugin\GrooaPayment\Models\PayPalModel;
+use Plugin\GrooaPayment\Model\PayPal;
+use Plugin\GrooaPayment\Model\TrackOrder;
 use Plugin\GrooaPayment\Response\BadRequest;
 use Plugin\GrooaPayment\Response\RestError;
-use Plugin\GrooaPayment\Models\TrackOrderModel;
 
 class SiteController
 {
@@ -28,7 +29,11 @@ class SiteController
      */
     public function createPayment()
     {
-        ipRequest()->mustBePost();
+        try {
+            self::validateRequest();
+        } catch(Exception $e) {
+            return new RestError($e->getMessage(), $e->getCode());
+        }
 
         if (!ipUser()->isLoggedIn()) {
             return new RestError("Action requires a registered user", 403);
@@ -36,18 +41,18 @@ class SiteController
 
         try {
             $trackId = self::getTrackIdFromQuery(ipRequest()->getQuery());
-        } catch (\Ip\Exception $e) {
+        } catch (Exception $e) {
             return new RestError($e->getMessage(), $e->getCode());
         }
 
         // Prevent double-purchasing of tracks
-        if (TrackOrderModel::hasPurchased($trackId, ipUser()->userId())) {
+        if (TrackOrder::hasPurchased($trackId, ipUser()->userId())) {
             return new BadRequest("User already own this track ($trackId)");
         }
 
         try {
             $transaction = self::generateTransactionForTrack($trackId);
-            $payment = PayPalModel::createPayment($transaction);
+            $payment = PayPal::createPayment($transaction);
         } catch (PayPalConnectionException $pce) {
             return new RestError($pce->getData(), $pce->getCode());
         } catch (\Exception $e) {
@@ -56,7 +61,7 @@ class SiteController
 
         $id = $payment->getId(); // paymentID
 
-        TrackOrderModel::create([
+        TrackOrder::create([
             'userId' => ipUser()->userId(),
             'trackId' => $trackId,
             'paymentId' => $id,
@@ -75,7 +80,11 @@ class SiteController
      */
     public function executePayment()
     {
-        ipRequest()->mustBePost();
+        try {
+            self::validateRequest();
+        } catch(Exception $e) {
+            return new RestError($e->getMessage(), $e->getCode());
+        }
 
         if (!ipUser()->isLoggedIn()) {
             return new RestError("Action requires a registered user", 403);
@@ -90,7 +99,7 @@ class SiteController
 
             // Get the order created in createPayment
             $order = self::getTrackOrder($trackId, ipUser()->userId());
-        } catch (\Ip\Exception $e) {
+        } catch (Exception $e) {
             return new RestError($e->getMessage(), $e->getCode());
         }
 
@@ -103,12 +112,12 @@ class SiteController
 
         try {
             $transaction = self::generateTransactionForTrack($trackId);
-            $payment = PayPalModel::executePayment( // Execute payment
+            $payment = PayPal::executePayment( // Execute payment
                 $paymentId,
                 $payerId,
                 $transaction
             );
-        } catch(\Ip\Exception $e) {
+        } catch(Exception $e) {
             return new BadRequest($e->getMessage());
         } catch (\Exception $e) {
             ipLog()->error($e->getMessage() . " ", $e);
@@ -155,7 +164,7 @@ class SiteController
 
         if ($saleState == 'pending' || $saleState == 'completed') {
             // The payment is now treated completed (even though state can be pending)
-            TrackOrderModel::update($order['orderId'], [
+            TrackOrder::update($order['orderId'], [
                 'payerId' => $payerId,
                 'saleId' => $saleId,
                 'state' => $saleState,
@@ -164,11 +173,11 @@ class SiteController
 
             if ($saleState == 'completed') {
                 // Completes the order, and stores it's timestamp
-                TrackOrderModel::completeOrder($order['orderId']);
+                TrackOrder::completeOrder($order['orderId']);
             }
         } else {
             // If it's not completed or pending it could be an error
-            TrackOrderModel::update($order['orderId'], ['state' => 'cancelled']);
+            TrackOrder::update($order['orderId'], ['state' => 'cancelled']);
             return new BadRequest("Invalid purchase state: $saleState");
         }
 
@@ -185,10 +194,10 @@ class SiteController
      */
     private function generateTransactionForTrack($trackId)
     {
-        $track = TrackModel::get($trackId);
+        $track = Track::get($trackId);
 
         if (empty($track)) {
-            throw new \Ip\Exception("No track with id: $trackId");
+            throw new Exception("No track with id: $trackId");
         }
 
         $amount = new Amount();
@@ -214,18 +223,31 @@ class SiteController
         return $transaction;
     }
 
+    private static function validateRequest() {
+        ipRequest()->mustBePost();
+
+        if (!ipRequest()->isAjax()) {
+            throw new Exception("Method must be called with Ajax", 403);
+        }
+
+        // Env is production, and doesn't use https
+        if (!PayPal::getUseSandbox() && !ipRequest()->isHttps()) {
+            throw new Exception("Request must use https in production", 403);
+        }
+    }
+
     /**
      * Validates that `paymentID` and `payerID` was provided in post-body
      *
      * @param $body
      * @return mixed
-     * @throws \Ip\Exception
+     * @throws Exception
      */
     private static function getPaymentIdAndPayerId($body) {
         if (empty($body['paymentID'])) {
-            throw new \Ip\Exception("Missing field `paymentID`", null, 400);
+            throw new Exception("Missing field `paymentID`", null, 400);
         } else if (empty($body['payerID'])) {
-            throw new \Ip\Exception("Missing field `payerID`", null, 400);
+            throw new Exception("Missing field `payerID`", null, 400);
         }
 
         return $body;
@@ -237,15 +259,15 @@ class SiteController
      *
      * @param mixed $query
      * @return int
-     * @throws \Ip\Exception
+     * @throws Exception
      */
     private static function getTrackIdFromQuery($query) {
         if (empty($query['track'])) {
-            throw new \Ip\Exception("Missing query-param `track`", null, 400);
+            throw new Exception("Missing query-param `track`", null, 400);
         }
 
         if (!is_numeric($query['track'])) {
-            throw new \Ip\Exception("Query-param `track` isn't numeric", null, 400);
+            throw new Exception("Query-param `track` isn't numeric", null, 400);
         }
 
         return $query['track'];
@@ -258,13 +280,13 @@ class SiteController
      * @param int $trackId
      * @param int $userId
      * @return array
-     * @throws \Ip\Exception
+     * @throws Exception
      */
     private static function getTrackOrder($trackId, $userId) {
-        $order = TrackOrderModel::getByTrackAndUser($trackId, $userId);
+        $order = TrackOrder::getByTrackAndUser($trackId, $userId);
 
         if (empty($order)) {
-            throw new \Ip\Exception(
+            throw new Exception(
                 "User has not yet created an paypal-payment for the track: $trackId",
                 null,
                 400);

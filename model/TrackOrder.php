@@ -1,10 +1,10 @@
 <?php
 
-namespace Plugin\GrooaPayment\Models;
+namespace Plugin\GrooaPayment\Model;
 
 use Ip\Exception;
 
-class TrackOrderModel
+class TrackOrder
 {
 
     const TABLE = 'track_order';

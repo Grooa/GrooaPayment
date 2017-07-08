@@ -4,11 +4,10 @@
  */
 
 namespace Plugin\GrooaPayment;
-use Plugin\Track\Models\TrackModel;
+use Plugin\Track\Model\Track;
 
 class AdminController
 {
-
     /**
      * @ipSubmenu Online Course
      */
@@ -33,7 +32,7 @@ class AdminController
                     'field' => 'trackId',
                     'label' => 'Track',
                     'type' => 'Select',
-                    'values' => TrackModel::findWithIdAndTitle()
+                    'values' => Track::findWithIdAndTitle()
                 ],
                 [
                     'field' => 'createdOn',
@@ -88,6 +87,12 @@ class AdminController
                     'type' => 'Text',
                     'default' => null,
                     'hint' => 'DateTime when payment has been executed (with state pending)'
+                ],
+                [
+                    'field' => 'invoiceNumber',
+                    'label' => 'Invoice Number',
+                    'type' => 'Text',
+                    'ignoreDb' => true
                 ]
             ],
             'pageSize' => 15

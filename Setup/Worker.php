@@ -3,7 +3,7 @@ namespace Plugin\GrooaPayment;
 
 use Ip\Exception;
 use \Ip\Internal\Plugins\Service as PluginService;
-use \Plugin\Track\Models\TrackModel;
+use \Plugin\Track\Models\Track;
 
 class Worker {
 
@@ -20,7 +20,7 @@ class Worker {
         new \PayPal\Api\Payment();
 
         $userTable = ipTable('user');
-        $trackTable = ipTable(TrackModel::TABLE);
+        $trackTable = ipTable(Track::TABLE);
 
         $sql = "
          CREATE TABLE IF NOT EXISTS $this->orderTable (

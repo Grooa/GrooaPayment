@@ -1,15 +1,14 @@
 <?php
 
-namespace Plugin\GrooaPayment\Models;
+namespace Plugin\GrooaPayment\Model;
 
 use Ip\Exception;
 use PayPal\Api\Payer;
 use PayPal\Api\Payment;
 use PayPal\Api\PaymentExecution;
 use PayPal\Api\RedirectUrls;
-use PayPal\Api\Transaction;
 
-class PayPalModel
+class PayPal
 {
 
     private static $context;
@@ -100,25 +99,6 @@ class PayPalModel
     }
 
     /**
-     * @param \PayPal\Api\ItemList $items
-     * @return \PayPal\Api\Transaction
-     */
-    private static function createTransaction($amount, $items = null)
-    {
-        $trans = new Transaction();
-        $trans
-            ->setAmount($amount)
-            ->setDescription("Grooa Online course")
-            ->setInvoiceNumber(uniqid());
-
-        if (!empty($items)) {
-            $trans->setItemList($items);
-        }
-
-        return $trans;
-    }
-
-    /**
      * @param string $baseUrl
      * @return \PayPal\Api\RedirectUrls
      */
@@ -131,5 +111,9 @@ class PayPalModel
 
         return $redirect;
     }
+
+    public static function getUseSandbox() {
+        return self::$useSandbox;
+    }
 }
-PayPalModel::init();
+PayPal::init();
