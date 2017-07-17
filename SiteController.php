@@ -98,7 +98,7 @@ class SiteController
             $trackId = self::getTrackIdFromQuery(ipRequest()->getQuery());
 
             // Get the order created in createPayment
-            $order = self::getTrackOrder($trackId, ipUser()->userId());
+            $order = self::getTrackOrder($trackId, ipUser()->userId(), $paymentId);
         } catch (Exception $e) {
             return new RestError($e->getMessage(), $e->getCode());
         }
@@ -133,14 +133,38 @@ class SiteController
 
     public function successPayment()
     {
-        die('Payment successful');
-        die(json_encode(ipRequest()->getPost()));
+        $data = [
+            'server' => json_encode(ipRequest()->getServer()),
+            'request' => json_encode(ipRequest()->getRequest()),
+            'post' => json_encode(ipRequest()->getPost())
+        ];
+
+        if (!ipRequest()->isPost()) {
+            ipLog()->warning('GrooaPayment_successPayment: Called webhook without post', $data);
+            return new RestError('Forbidden', 403);
+        }
+
+        ipLog()->info('GrooaPayment_successPayment', $data);
+
+        return new \Ip\Response\Json(['message' => 'hello']);
     }
 
     public function cancelPayment()
     {
-        die('Payment cancelled');
-        die(json_encode(ipRequest()->getPost()));
+        $data = [
+            'server' => ipRequest()->getServer(),
+            'request' => ipRequest()->getRequest(),
+            'post' => ipRequest()->getPost()
+        ];
+
+        if (!ipRequest()->isPost()) {
+            ipLog()->warning('GrooaPayment_cancelPaymen: Called webhook without post', $data);
+            return new RestError('Forbidden', 403);
+        }
+
+        ipLog()->info('GrooaPayment_cancelPayment', $data);
+
+        return new \Ip\Response\Json(['message' => 'hello']);
     }
 
     /**
@@ -226,10 +250,6 @@ class SiteController
     private static function validateRequest() {
         ipRequest()->mustBePost();
 
-        if (!ipRequest()->isAjax()) {
-            throw new Exception("Method must be called with Ajax", 403);
-        }
-
         // Env is production, and doesn't use https
         if (!PayPal::getUseSandbox() && !ipRequest()->isHttps()) {
             throw new Exception("Request must use https in production", 403);
@@ -282,8 +302,8 @@ class SiteController
      * @return array
      * @throws Exception
      */
-    private static function getTrackOrder($trackId, $userId) {
-        $order = TrackOrder::getByTrackAndUser($trackId, $userId);
+    private static function getTrackOrder($trackId, $userId, $paymentId) {
+        $order = TrackOrder::getByTrackUserAndPaymentId($trackId, $userId, $paymentId);
 
         if (empty($order)) {
             throw new Exception(

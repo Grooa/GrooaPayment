@@ -32,7 +32,7 @@ class AdminController
                     'field' => 'trackId',
                     'label' => 'Track',
                     'type' => 'Select',
-                    'values' => Track::findWithIdAndTitle()
+                    'values' => Track::getWithIdAndTitle()
                 ],
                 [
                     'field' => 'createdOn',

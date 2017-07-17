@@ -3,11 +3,13 @@
 namespace Plugin\GrooaPayment\Model;
 
 use Ip\Exception;
+use Plugin\Track\Model\Track;
 
 class TrackOrder
 {
 
     const TABLE = 'track_order';
+    private static $unresolvedOrderLifetime = 45; // minutes
 
     public static function get($query)
     {
@@ -27,6 +29,31 @@ class TrackOrder
     public static function getByTrackAndUser($trackId, $userId)
     {
         return self::get(['trackId' => $trackId, 'userId' => $userId]);
+    }
+
+    public static function getPurchasedByTrackAndUser($trackId, $userId) {
+        $rows = self::getAll(['trackId' => $trackId, 'userId' => $userId]);
+
+
+        foreach ($rows as $r) {
+            if (!empty($r['saleId']) && ($r['state'] == 'pending' || $r['state'] == 'completed')) {
+                return $r;
+            }
+        }
+
+        return null;
+    }
+
+    public static function getByUserId($uid) {
+        $sql = "SELECT * FROM ". ipTable(Track::TABLE) ." AS tracks, 
+                  (SELECT trackId FROM " . ipTable(self::TABLE) ." WHERE `userId`=" . esc($uid) . ") AS ordered 
+                WHERE tracks.trackId = ordered.trackId;";
+
+        return ipDb()->fetchAll($sql);
+    }
+
+    public static function getByTrackUserAndPaymentId($trackId, $userId, $paymentId) {
+        return self::get(['trackId' => $trackId, 'userId' => $userId, 'paymentId' => $paymentId]);
     }
 
     public static function getByPaymentId($id)
@@ -52,7 +79,22 @@ class TrackOrder
             throw new Exception("Missing required field `userId` or `trackId`");
         }
 
+        if (empty($fields['paymentId'])) {
+            throw new Exception("Missing required field `paymentId`");
+        }
+
         return ipDb()->insert(self::TABLE, $fields);
+    }
+
+    public static function clearUnresolvedOrders() {
+        $now = new \DateTime();
+
+        $result = ipDb()->execute(
+            "DELETE FROM ". ipTable(self::TABLE) . " WHERE saleId IS NULL AND " .
+            "(createdOn + INTERVAL " . self::$unresolvedOrderLifetime . " MINUTE) < NOW();"
+        ); // Give the orders some time to finish before deleting them
+
+        return $result != 0;
     }
 
     public static function update($id, $fields)
@@ -66,7 +108,7 @@ class TrackOrder
 
     public static function hasPurchased($trackId, $userId)
     {
-        $row = self::getByTrackAndUser($trackId, $userId);
+        $row = self::getPurchasedByTrackAndUser($trackId, $userId);
 
         if (!$row || empty($row['state'])) {
             return false;
