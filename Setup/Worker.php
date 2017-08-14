@@ -3,7 +3,7 @@ namespace Plugin\GrooaPayment;
 
 use Ip\Exception;
 use \Ip\Internal\Plugins\Service as PluginService;
-use Plugin\GrooaPayment\Model\TrackOrder;
+use \Plugin\GrooaPayment\Model\TrackOrder;
 use \Plugin\Track\Model\Track;
 
 class Worker {
@@ -20,39 +20,39 @@ class Worker {
 
         new \PayPal\Api\Payment();
 
-        $userTable = ipTable('user');
-        $trackTable = ipTable(Track::TABLE);
-
-        $sql = "
-         CREATE TABLE IF NOT EXISTS $this->orderTable (
-          `orderId` INT(11) NOT NULL AUTO_INCREMENT,
-          `type` VARCHAR(128),
-          `createdOn` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    	  `userId` INT(11) NOT NULL,
-		  `trackId` INT(11) NOT NULL,
-		  `payerId` VARCHAR (255),
-		  `paymentId` VARCHAR(255),
-		  `saleId` VARCHAR (255),
-		  `state` VARCHAR(128),
-		  `completed` DATETIME,
-		  `paymentExecuted` DATETIME,
-		  `invoiceNumber` VARCHAR(255),
-          
-          FOREIGN KEY (`userId`)
-            REFERENCES $userTable (`id`)
-            ON DELETE CASCADE
-            ON UPDATE CASCADE,
-            
-            
-          FOREIGN KEY (`trackId`)
-            REFERENCES $trackTable (`trackId`),
-          
-          PRIMARY KEY (`orderId`)
-        
-        ) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
-        ";
-
-        ipDb()->execute($sql);
+//        $userTable = ipTable('user');
+//        $trackTable = ipTable(Track::TABLE);
+//
+//        $sql = "
+//         CREATE TABLE IF NOT EXISTS $this->orderTable (
+//          `orderId` INT(11) NOT NULL AUTO_INCREMENT,
+//          `type` VARCHAR(128),
+//          `createdOn` DATETIME DEFAULT CURRENT_TIMESTAMP,
+//    	  `userId` INT(11) NOT NULL,
+//		  `trackId` INT(11) NOT NULL,
+//		  `payerId` VARCHAR (255),
+//		  `paymentId` VARCHAR(255),
+//		  `saleId` VARCHAR (255),
+//		  `state` VARCHAR(128),
+//		  `completed` DATETIME,
+//		  `paymentExecuted` DATETIME,
+//		  `invoiceNumber` VARCHAR(255),
+//
+//          FOREIGN KEY (`userId`)
+//            REFERENCES $userTable (`id`)
+//            ON DELETE CASCADE
+//            ON UPDATE CASCADE,
+//
+//
+//          FOREIGN KEY (`trackId`)
+//            REFERENCES $trackTable (`trackId`),
+//
+//          PRIMARY KEY (`orderId`)
+//
+//        ) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
+//        ";
+//
+//        ipDb()->execute($sql);
     }
 
     public function remove() {

@@ -18,6 +18,10 @@ class AdminController
             'idField' => 'orderId',
             'fields' => [
                 [
+                    'label' => 'Basic Data',
+                    'type' => 'Tab'
+                ],
+                [
                     'field' => 'orderId',
                     'label' => 'id',
                     'type' => 'Integer',
@@ -42,7 +46,11 @@ class AdminController
                 [
                     'field' => 'type',
                     'label' => 'Payment Type',
-                    'type' => 'Text'
+                    'type' => 'Select',
+                    'values' => [
+                        ['paypal', 'PayPal'],
+                        ['manual', 'Manual']
+                    ]
                 ],
                 [
                     'field' => 'payerId',
@@ -93,6 +101,26 @@ class AdminController
                     'label' => 'Invoice Number',
                     'type' => 'Text',
                     'ignoreDb' => true
+                ],
+                [
+                    'label' => 'Override Options',
+                    'type' => 'Tab'
+                ],
+                [
+                    'field' => 'override',
+                    'label' => 'Manual override purchase',
+                    'type' => 'Checkbox'
+                ],
+                [
+                    'field' => 'overrideReason',
+                    'label' => 'Reason for override',
+                    'type' => 'RichText'
+                ],
+                [
+                    'field' => 'overridePrice',
+                    'label' => 'Amount Payed',
+                    'type' => 'Text',
+                    'default' => 0.0
                 ]
             ],
             'pageSize' => 15
