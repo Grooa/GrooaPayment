@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS ip_track_order (
   `override` BOOL DEFAULT FALSE,
   `overrideReason` TEXT,
   `overridePrice` FLOAT DEFAULT NULL,
+  `isSandbox` BOOL DEFAULT FALSE,
 
   FOREIGN KEY (`userId`)
     REFERENCES ip_user (`id`)

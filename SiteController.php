@@ -65,7 +65,8 @@ class SiteController
             'userId' => ipUser()->userId(),
             'trackId' => $trackId,
             'paymentId' => $id,
-            'invoiceNumber' => $transaction->getInvoiceNumber()
+            'invoiceNumber' => $transaction->getInvoiceNumber(),
+            'isSandbox' => ipGetOption('GrooaPayment.useSandbox', false)
         ]);
 
         return new \Ip\Response\Json(['paymentID' => $id]);
@@ -151,6 +152,7 @@ class SiteController
 
     public function cancelPayment()
     {
+
         $data = [
             'server' => ipRequest()->getServer(),
             'request' => ipRequest()->getRequest(),
