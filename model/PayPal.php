@@ -48,6 +48,10 @@ class PayPal
         return $payment;
     }
 
+    public static function getApiContext() {
+        return self::$context;
+    }
+
     /**
      *
      * @param \PayPal\Api\Transaction $transaction

@@ -4,6 +4,7 @@ namespace Plugin\GrooaPayment\Model;
 
 use Ip\Exception;
 use Plugin\Track\Model\Track;
+use Zend\I18n\Validator\DateTime;
 
 class TrackOrder
 {
@@ -146,11 +147,21 @@ class TrackOrder
 
     /**
      * Will set the order to `completed`, and set it's timestamp
-     * @param int $orderId
+     * @param int $invoiceNumber
+     * @return int
      */
-    public static function completeOrder($orderId)
+    public static function completeOrder($invoiceNumber)
     {
+        $results = ipDb()->update(
+            self::TABLE,
+            [
+                'state' => 'completed',
+                'completed' => date("Y-m-d H:i:s")
+            ],
+            ['invoiceNumber' => $invoiceNumber]
+        );
 
+        return $results;
     }
 
     public static function cancelOrder($orderId)

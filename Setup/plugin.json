@@ -27,6 +27,16 @@
       "label": "PayPal Account",
       "name": "account",
       "type": "Email"
+    },
+    {
+      "label": "PayPal Webhook id (success)",
+      "name": "paypalWebhookSuccess",
+      "type": "Text"
+    },
+    {
+      "label": "PayPal Webhook id (cancel)",
+      "name": "paypalWebhookCancel",
+      "type": "Text"
     }
   ]
 }

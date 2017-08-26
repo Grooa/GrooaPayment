@@ -7,6 +7,7 @@ use PayPal\Api\Amount;
 use PayPal\Api\Item;
 use PayPal\Api\ItemList;
 use PayPal\Api\Transaction;
+use PayPal\Api\VerifyWebhookSignature;
 use PayPal\Exception\PayPalConnectionException;
 use Plugin\Track\Model\Track;
 
@@ -31,7 +32,7 @@ class SiteController
     {
         try {
             self::validateRequest();
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             return new RestError($e->getMessage(), $e->getCode());
         }
 
@@ -83,7 +84,7 @@ class SiteController
     {
         try {
             self::validateRequest();
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             return new RestError($e->getMessage(), $e->getCode());
         }
 
@@ -118,7 +119,7 @@ class SiteController
                 $payerId,
                 $transaction
             );
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             return new BadRequest($e->getMessage());
         } catch (\Exception $e) {
             ipLog()->error($e->getMessage() . " ", $e);
@@ -128,35 +129,105 @@ class SiteController
         return self::handleCompletedPayment($payment, $payerId, $order);
     }
 
-    public function deniedPayment() {
-        die("Payment denied");
+    /**
+     * Build the SignatureVerification object, used to verify
+     * webhooks received from PayPal.
+     *
+     * @param array $headers
+     * @param string $body
+     * @return \PayPal\Api\VerifyWebhookSignature
+     */
+    private function createSignatureVerification($headers, $body)
+    {
+        // Transform request-headers to be in uppercase
+        $headers = array_change_key_case($headers, CASE_UPPER);
+
+        $signatureVerification = new VerifyWebhookSignature();
+        $signatureVerification->setAuthAlgo($headers['HTTP_PAYPAL_AUTH_ALGO']);
+        $signatureVerification->setTransmissionId($headers['HTTP_PAYPAL_TRANSMISSION_ID']);
+        $signatureVerification->setCertUrl($headers['HTTP_PAYPAL_CERT_URL']);
+        $signatureVerification->setWebhookId("2WU59986VH019783E"); // TODO:ffl - Replace with value from config
+        $signatureVerification->setTransmissionSig($headers['HTTP_PAYPAL_TRANSMISSION_SIG']);
+        $signatureVerification->setTransmissionTime($headers['HTTP_PAYPAL_TRANSMISSION_TIME']);
+
+        $signatureVerification->setRequestBody($body);
+
+        return $signatureVerification;
     }
+
 
     public function successPayment()
     {
-        $data = [
-            'server' => json_encode(ipRequest()->getServer()),
-            'request' => json_encode(ipRequest()->getRequest()),
-            'post' => json_encode(ipRequest()->getPost())
-        ];
+        // Only allow post requests
+        ipRequest()->mustBePost();
 
-        if (!ipRequest()->isPost()) {
-            ipLog()->warning('GrooaPayment_successPayment: Called webhook without post', $data);
-            return new RestError('Forbidden', 403);
+        $requestBodyRaw = file_get_contents('php://input'); // Request body
+        $requestBody = json_decode($requestBodyRaw, true);
+
+        // No point to process an empty webhook. Also this method only
+        // Supports "completed sales" webhooks.
+        if (empty($requestBody) || $requestBody['event_type'] !== 'PAYMENT.SALE.COMPLETED') {
+            ipLog()->warning('Unknown webhook event type', $requestBody);
+            return new RestError('Unknown event type', 400);
         }
 
-        ipLog()->info('GrooaPayment_successPayment', $data);
+        $signatureVerification = self::createSignatureVerification(
+            ipRequest()->getServer(),
+            $requestBodyRaw
+        );
 
-        return new \Ip\Response\Json(['message' => 'hello']);
+        $invoiceNumber = $requestBody['resource']['invoice_number'];
+        $summary = $requestBody['summary'];
+
+        $request = clone $signatureVerification;
+        $output = null;
+
+        try {
+            // Run the verification of the Webhook
+            $output = $signatureVerification->post(PayPal::getApiContext());
+        } catch (\Exception $e) {
+            ipLog()->error("Problem validating the webhook for invoice: ${invoiceNumber}", [
+                'invoice' => $invoiceNumber,
+                'webhookSummary' => $summary,
+                'error' => $e->getMessage(),
+                'data' => $e->getData()
+            ]);
+
+            return new RestError('Unknown Error', 500);
+        }
+
+        $status = $output->getVerificationStatus();
+
+        // Catch all webhooks which ISN'T verified
+        if ($status !== 'SUCCESS') {
+            ipLog()->notice("Webhook for invoice: ${invoiceNumber} failed validation", [
+                'status' => !empty($output) ? $output->getVerificationStatus() : '[failed]',
+                'request' => $request->toJSON(),
+                'invoice' => $invoiceNumber,
+                'webhookSummary' => $summary,
+                'output' => $output
+            ]);
+            return new RestError('Bad invoice', 400); // Hide response
+        }
+
+        TrackOrder::completeOrder($invoiceNumber); // Update the payment to completed
+
+        ipLog()->info("Invoice: ${invoiceNumber} validated", [
+            'message' => "SALE completed for invoice: ${invoiceNumber}",
+            'summary' => $summary
+        ]);
+
+        return new \Ip\Response\Json([]); // Return an empty body
     }
 
     public function cancelPayment()
     {
+        $requestBodyRaw = file_get_contents('php://input');
+        $requestBody = json_decode($requestBodyRaw, true);
 
         $data = [
-            'server' => ipRequest()->getServer(),
-            'request' => ipRequest()->getRequest(),
-            'post' => ipRequest()->getPost()
+            'body' => $requestBodyRaw,
+            'server' => ipRequest()->getServer()
         ];
 
         if (!ipRequest()->isPost()) {
@@ -180,7 +251,8 @@ class SiteController
      * @param mixed $order
      * @return \Ip\Response\Json|RestError | \Ip\Response\Json
      */
-    private static function handleCompletedPayment($payment, $payerId, $order) {
+    private static function handleCompletedPayment($payment, $payerId, $order)
+    {
         $sale = $payment->getTransactions()[0]
             ->getRelatedResources()[0]
             ->getSale();
@@ -249,7 +321,8 @@ class SiteController
         return $transaction;
     }
 
-    private static function validateRequest() {
+    private static function validateRequest()
+    {
         ipRequest()->mustBePost();
 
         // Env is production, and doesn't use https
@@ -265,7 +338,8 @@ class SiteController
      * @return mixed
      * @throws Exception
      */
-    private static function getPaymentIdAndPayerId($body) {
+    private static function getPaymentIdAndPayerId($body)
+    {
         if (empty($body['paymentID'])) {
             throw new Exception("Missing field `paymentID`", null, 400);
         } else if (empty($body['payerID'])) {
@@ -283,7 +357,8 @@ class SiteController
      * @return int
      * @throws Exception
      */
-    private static function getTrackIdFromQuery($query) {
+    private static function getTrackIdFromQuery($query)
+    {
         if (empty($query['track'])) {
             throw new Exception("Missing query-param `track`", null, 400);
         }
@@ -304,7 +379,8 @@ class SiteController
      * @return array
      * @throws Exception
      */
-    private static function getTrackOrder($trackId, $userId, $paymentId) {
+    private static function getTrackOrder($trackId, $userId, $paymentId)
+    {
         $order = TrackOrder::getByTrackUserAndPaymentId($trackId, $userId, $paymentId);
 
         if (empty($order)) {
