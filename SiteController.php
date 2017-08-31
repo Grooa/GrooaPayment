@@ -137,7 +137,7 @@ class SiteController
      * @param string $body
      * @return \PayPal\Api\VerifyWebhookSignature
      */
-    private function createSignatureVerification($headers, $body)
+    private function createSignatureVerification($headers, $body, $webhookId)
     {
         // Transform request-headers to be in uppercase
         $headers = array_change_key_case($headers, CASE_UPPER);
@@ -146,7 +146,7 @@ class SiteController
         $signatureVerification->setAuthAlgo($headers['HTTP_PAYPAL_AUTH_ALGO']);
         $signatureVerification->setTransmissionId($headers['HTTP_PAYPAL_TRANSMISSION_ID']);
         $signatureVerification->setCertUrl($headers['HTTP_PAYPAL_CERT_URL']);
-        $signatureVerification->setWebhookId("2WU59986VH019783E"); // TODO:ffl - Replace with value from config
+        $signatureVerification->setWebhookId($webhookId); // TODO:ffl - Replace with value from config
         $signatureVerification->setTransmissionSig($headers['HTTP_PAYPAL_TRANSMISSION_SIG']);
         $signatureVerification->setTransmissionTime($headers['HTTP_PAYPAL_TRANSMISSION_TIME']);
 
@@ -173,7 +173,8 @@ class SiteController
 
         $signatureVerification = self::createSignatureVerification(
             ipRequest()->getServer(),
-            $requestBodyRaw
+            $requestBodyRaw,
+            ipGetOption('GrooaPayment.paypalWebhookSuccess', '[null]')
         );
 
         $invoiceNumber = $requestBody['resource']['invoice_number'];

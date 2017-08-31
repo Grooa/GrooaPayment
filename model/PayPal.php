@@ -25,9 +25,13 @@ class PayPal
             ipGetOption('GrooaPayment.secret')
         );
 
-        self::$useSandbox = ipGetOption('GrooaPayment.useSandbox');
+        self::$useSandbox = ipGetOption('GrooaPayment.useSandbox', true); // Defaults to true
         self::$account = ipGetOption('GrooaPayment.account');
         self::$context = new \PayPal\Rest\ApiContext($oauth);
+
+        if (!self::$useSandbox) {
+            self::$context->setConfig(['mode' => 'live']); // Set to live account
+        }
     }
 
     public static function executePayment($paymentId, $payerId, $transaction)
