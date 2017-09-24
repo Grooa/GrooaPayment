@@ -72,7 +72,9 @@ class TrackOrder
 
         $sql = "SELECT * FROM ". ipTable(Track::TABLE) ." AS tracks, 
                   (SELECT trackId FROM " . ipTable(self::TABLE) ." WHERE `userId`=" . esc($uid) . ") AS ordered 
-                WHERE tracks.trackId = ordered.trackId;";
+                WHERE tracks.trackId = ordered.trackId " .
+            ($courseId != null ? "AND grooaCourseId=". esc($courseId) . " " : '')
+            . "OR tracks.isFree=1;";
 
         return ipDb()->fetchAll($sql);
     }
@@ -148,6 +150,11 @@ class TrackOrder
         // Checks if a user has bulk purchased a whole course
         // Like the CLEAR Master Class
         if (!empty($grooaCourseId) && self::hasBulkPurchased($userId, $grooaCourseId)) {
+            return true;
+        }
+
+        // Free items can be accessed
+        if (Track::isFree($trackId)) {
             return true;
         }
 
