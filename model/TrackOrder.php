@@ -10,6 +10,8 @@ class TrackOrder
 {
 
     const TABLE = 'track_order';
+    const BULK_PURCHASES = 'grooa_course_bulk_purchases';
+
     private static $unresolvedOrderLifetime = 45; // minutes
 
     public static function get($query)
@@ -62,7 +64,12 @@ class TrackOrder
         return null;
     }
 
-    public static function getByUserId($uid) {
+    public static function getByUserId($uid, $courseId = null) {
+        // If a user has bulk purchased, we just return the whole list of courses
+        if (!empty($courseId) && self::hasBulkPurchased($uid, $courseId)) {
+            return Track::findAllPublished($courseId);
+        }
+
         $sql = "SELECT * FROM ". ipTable(Track::TABLE) ." AS tracks, 
                   (SELECT trackId FROM " . ipTable(self::TABLE) ." WHERE `userId`=" . esc($uid) . ") AS ordered 
                 WHERE tracks.trackId = ordered.trackId;";
@@ -124,12 +131,26 @@ class TrackOrder
         );
     }
 
+    public static function hasBulkPurchased($uid, $grooaCourse) {
+        $rows = ipDb()->selectRow(self::BULK_PURCHASES, 'id', ['userid' => $uid, 'courseId' => $grooaCourse]);
+
+        return !empty($rows);
+    }
+
     /**
      * Based on the $trackId and $userId,
      * will it check if the user has purchased this product
      */
     public static function hasPurchased($trackId, $userId)
     {
+        $grooaCourseId = Track::getGrooaCourseIdByTrackId($trackId);
+
+        // Checks if a user has bulk purchased a whole course
+        // Like the CLEAR Master Class
+        if (!empty($grooaCourseId) && self::hasBulkPurchased($userId, $grooaCourseId)) {
+            return true;
+        }
+
         $row = self::getPurchasedByTrackAndUser($trackId, $userId);
 
         if (!$row || empty($row['state'])) {

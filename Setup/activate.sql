@@ -27,3 +27,18 @@ CREATE TABLE IF NOT EXISTS ip_track_order (
   PRIMARY KEY (`orderId`)
 
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `ip_grooa_course_bulk_purchases` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `userid` INT (11) NOT NULL,
+  `courseId` INT (11) NOT NULL,
+  `createdOn` DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+  FOREIGN KEY (`userid`)
+  REFERENCES `ip_user` (`id`),
+
+  FOREIGN KEY (`courseId`)
+  REFERENCES `ip_grooa_course` (`id`),
+
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8;

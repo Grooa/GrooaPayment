@@ -10,11 +10,54 @@ use Plugin\Track\Model\Track;
 class AdminController
 {
     /**
-     * @ipSubmenu Online Course
+     * @ipSubmenu Bulk Purchases
+     * Laura often gives her investors and customers to pay in bulks.
+     * This fields allows her the option to add a payment to a user in bulks
      */
     public function index() {
         $config = [
-            'title' => 'Online Course purchases',
+            'title' => 'User Bulk Purchases',
+            'table' => 'grooa_course_bulk_purchases',
+            'idField' => 'id',
+            'fields' => [
+                [
+                    'field' => 'id',
+                    'label' => 'ID',
+                    'allowCreate' => false,
+                    'allowUpdate' => false
+                ],
+                [
+                    'field' => 'userid',
+                    'label' => 'user',
+                    'type' => 'Select',
+                    'values' => GrooaUser::getWithIdAndTitle()
+                ],
+                [
+                    'field' => 'courseId',
+                    'label' => 'Grooa Course',
+                    'type' => 'Select',
+                    'values' => Track::getGrooaCourseWithIdAndName()
+                ],
+                [
+                    'field' => 'createdOn',
+                    'label' => 'Created On',
+                    'type' => 'Text',
+                    'allowCreate' => false,
+                    'allowUpdate' => false
+                ]
+            ],
+            'pageSize' => 15
+        ];
+
+        return ipGridController($config);
+    }
+
+    /**
+     * @ipSubmenu Single Purchases
+     */
+    public function singlePurchases() {
+        $config = [
+            'title' => 'Single Purchases',
             'table' => 'track_order',
             'idField' => 'orderId',
             'actions' => [
