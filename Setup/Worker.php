@@ -4,7 +4,7 @@ namespace Plugin\GrooaPayment;
 use Ip\Exception;
 use \Ip\Internal\Plugins\Service as PluginService;
 use \Plugin\GrooaPayment\Model\TrackOrder;
-use \Plugin\Track\Model\Track;
+use \Plugin\Track\Model\Module;
 
 class Worker {
 

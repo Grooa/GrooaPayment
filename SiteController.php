@@ -9,7 +9,7 @@ use PayPal\Api\ItemList;
 use PayPal\Api\Transaction;
 use PayPal\Api\VerifyWebhookSignature;
 use PayPal\Exception\PayPalConnectionException;
-use Plugin\Track\Model\Track;
+use Plugin\Track\Model\Module;
 
 use Plugin\GrooaPayment\Model\PayPal;
 use Plugin\GrooaPayment\Model\TrackOrder;
@@ -293,7 +293,7 @@ class SiteController
      */
     private function generateTransactionForTrack($trackId)
     {
-        $track = Track::get($trackId);
+        $track = Module::get($trackId);
 
         if (empty($track)) {
             throw new Exception("No track with id: $trackId");

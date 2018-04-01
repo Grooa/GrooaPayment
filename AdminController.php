@@ -5,7 +5,7 @@
 
 namespace Plugin\GrooaPayment;
 use Plugin\GrooaUser\Model\GrooaUser;
-use Plugin\Track\Model\Track;
+use Plugin\Track\Model\Module;
 
 class AdminController
 {
@@ -36,7 +36,7 @@ class AdminController
                     'field' => 'courseId',
                     'label' => 'Grooa Course',
                     'type' => 'Select',
-                    'values' => Track::getGrooaCourseWithIdAndName()
+                    'values' => Module::getGrooaCourseWithIdAndName()
                 ],
                 [
                     'field' => 'createdOn',
@@ -97,7 +97,7 @@ class AdminController
                     'field' => 'trackId',
                     'label' => 'Module',
                     'type' => 'Select',
-                    'values' => Track::getWithIdAndTitle()
+                    'values' => Module::getWithIdAndTitle()
                 ],
                 [
                     'field' => 'type',

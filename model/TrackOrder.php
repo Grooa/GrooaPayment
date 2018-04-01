@@ -3,8 +3,7 @@
 namespace Plugin\GrooaPayment\Model;
 
 use Ip\Exception;
-use Plugin\Track\Model\Track;
-use Zend\I18n\Validator\DateTime;
+use Plugin\Track\Model\Module;
 
 class TrackOrder
 {
@@ -67,10 +66,10 @@ class TrackOrder
     public static function getByUserId($uid, $courseId = null) {
         // If a user has bulk purchased, we just return the whole list of courses
         if (!empty($courseId) && self::hasBulkPurchased($uid, $courseId)) {
-            return Track::findAllPublished($courseId);
+            return Module::findAllPublished($courseId);
         }
 
-        $sql = "SELECT * FROM ". ipTable(Track::TABLE) ." AS tracks, 
+        $sql = "SELECT * FROM ". ipTable(Module::TABLE) ." AS tracks, 
                   (SELECT trackId FROM " . ipTable(self::TABLE) ." WHERE `userId`=" . esc($uid) . ") AS ordered 
                 WHERE tracks.trackId = ordered.trackId " .
             ($courseId != null ? "AND grooaCourseId=". esc($courseId) . " " : '')
@@ -145,7 +144,7 @@ class TrackOrder
      */
     public static function hasPurchased($trackId, $userId)
     {
-        $grooaCourseId = Track::getGrooaCourseIdByTrackId($trackId);
+        $grooaCourseId = Module::getGrooaCourseIdByTrackId($trackId);
 
         // Checks if a user has bulk purchased a whole course
         // Like the CLEAR Master Class
@@ -154,7 +153,7 @@ class TrackOrder
         }
 
         // Free items can be accessed
-        if (Track::isFree($trackId)) {
+        if (Module::isModuleFree($trackId)) {
             return true;
         }
 
